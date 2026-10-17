@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../models/riwayat_laporan_model.dart';
+import '../cubit/riwayat_laporan_cubit.dart';
 import '../navigation/app_routes.dart';
 
 class Laporan extends StatelessWidget {
@@ -28,7 +28,6 @@ class Laporan extends StatelessWidget {
         'deskripsi': 'Kapasitas TPS hampir penuh.',
       },
     ],
-
     'Diproses': [
       {
         'judul': 'Pengaduan sampah pasar',
@@ -49,7 +48,6 @@ class Laporan extends StatelessWidget {
         'deskripsi': 'Penjadwalan ulang pengangkutan.',
       },
     ],
-
     'Selesai': [
       {
         'judul': 'Pembersihan area publik',
@@ -90,123 +88,96 @@ class Laporan extends StatelessWidget {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(
-            hasil.toString(),
-          ),
+          content: Text(hasil.toString()),
           behavior: SnackBarBehavior.floating,
         ),
       );
   }
 
-  Widget daftarLaporan(
-    BuildContext context,
-    List<Map<String, String>> items,
-  ) {
-    final riwayat =
-        context.watch<RiwayatLaporanModel>();
-
+  Widget daftarLaporan(BuildContext context, List<Map<String, String>> items) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
 
-        final sudahTersimpan =
-            riwayat.sudahTersimpan(item);
-
-        return Card(
-          margin: const EdgeInsets.only(
-            bottom: 12,
-          ),
-          child: ListTile(
-            leading: CircleAvatar(
-              child: Icon(
-                sudahTersimpan
-                    ? Icons.check
-                    : Icons.delete_outline,
-              ),
-            ),
-
-            title: Text(
-              item['judul']!,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            subtitle: Padding(
-              padding: const EdgeInsets.only(
-                top: 4,
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${item['lokasi']}\n'
-                    '${item['deskripsi']}',
+        return BlocSelector<
+          RiwayatLaporanCubit,
+          List<Map<String, String>>,
+          bool
+        >(
+          selector: (daftarRiwayat) {
+            return daftarRiwayat.any(
+              (laporan) =>
+                  laporan['judul'] == item['judul'] &&
+                  laporan['lokasi'] == item['lokasi'],
+            );
+          },
+          builder: (context, sudahTersimpan) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: CircleAvatar(
+                  child: Icon(
+                    sudahTersimpan ? Icons.check : Icons.delete_outline,
                   ),
-
-                  if (sudahTersimpan) ...[
-                    const SizedBox(height: 8),
-
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          size: 16,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary,
-                        ),
-
-                        const SizedBox(width: 6),
-
-                        Text(
-                          'Tersimpan di riwayat',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                FontWeight.bold,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary,
-                          ),
+                ),
+                title: Text(
+                  item['judul']!,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${item['lokasi']}\n'
+                        '${item['deskripsi']}',
+                      ),
+                      if (sudahTersimpan) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Tersimpan di riwayat',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            isThreeLine: true,
-
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (sudahTersimpan)
-                  Icon(
-                    Icons.bookmark,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary,
+                    ],
                   ),
-
-                const Icon(
-                  Icons.chevron_right,
                 ),
-              ],
-            ),
-
-            onTap: () {
-              bukaDetail(
-                context,
-                item,
-              );
-            },
-          ),
+                isThreeLine: true,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (sudahTersimpan)
+                      Icon(
+                        Icons.bookmark,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+                onTap: () {
+                  bukaDetail(context, item);
+                },
+              ),
+            );
+          },
         );
       },
     );
@@ -219,9 +190,7 @@ class Laporan extends StatelessWidget {
       child: Column(
         children: [
           Material(
-            color: Theme.of(context)
-                .colorScheme
-                .surface,
+            color: Theme.of(context).colorScheme.surface,
             child: const TabBar(
               tabs: [
                 Tab(text: 'Menunggu'),
@@ -230,24 +199,12 @@ class Laporan extends StatelessWidget {
               ],
             ),
           ),
-
           Expanded(
             child: TabBarView(
               children: [
-                daftarLaporan(
-                  context,
-                  data['Menunggu']!,
-                ),
-
-                daftarLaporan(
-                  context,
-                  data['Diproses']!,
-                ),
-
-                daftarLaporan(
-                  context,
-                  data['Selesai']!,
-                ),
+                daftarLaporan(context, data['Menunggu']!),
+                daftarLaporan(context, data['Diproses']!),
+                daftarLaporan(context, data['Selesai']!),
               ],
             ),
           ),
